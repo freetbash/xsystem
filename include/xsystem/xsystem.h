@@ -7,6 +7,8 @@
 #include <iostream>
 #if __linux__
 #include <unistd.h>
+
+
 #elif _WIN32
 #include <Windows.h>
 #include <Winsock2.h>
@@ -28,8 +30,13 @@ namespace xsystem{
     std::string pwd();
     std::string get_hostname();
     std::string get_os();
+    void mkdirs(std::string path);
+    // rm
+    // isdir
+    // file_exist
+    // dir_exist
 
-}
+};
 
 
 
@@ -78,7 +85,7 @@ namespace net{
         FSocket accept();
         void close();
     };
-}
+};
 
 
 
