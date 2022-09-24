@@ -1,6 +1,6 @@
 #ifndef CROSS_SYSTEM
 #define CROSS_SYSTEM
-// -lws2_32
+// -lws2_32 -liphlpapi
 #include <string>
 #include <string.h>
 #include <stdio.h>
@@ -30,6 +30,7 @@ namespace xsystem{
     std::string pwd();
     std::string get_hostname();
     std::string get_os();
+    std::string get_mac();
     void mkdirs(std::string path);
     // rm
     // isdir
