@@ -4,6 +4,6 @@ using namespace std;
 int main(int argc, char const *argv[])
 {
     /* code */
-    cout <<x_shell("dir")<<endl;
+    cout <<xsystem::shell("dir")<<endl;
     return 0;
 }

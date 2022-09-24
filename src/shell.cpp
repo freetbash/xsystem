@@ -3,12 +3,12 @@
 #include <sstream>
 #include <stdio.h>
 /********************************************************************************
-* @File x_shell.cpp
+* @File shell.cpp
 * @Author: Freet-Bash
 * @Date: 2022-09-10  11:44:25
 * @Description: 跨平台shell popen调用
 ********************************************************************************/
-std::string x_shell(std::string cmd){
+std::string xsystem::shell(std::string cmd){
 
 	#ifdef _WIN32
 			FILE *fp;
