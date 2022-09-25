@@ -3,9 +3,11 @@
 #include <unistd.h>  //close 和 shutdown
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+typedef uint32_t in_addr_t;
+typedef u_int sa_family_t;
 #include <arpa/inet.h> //inet_ntop
 #include <string.h>
+#include <netdb.h>
 #define SOCKET_ERROR (-1)
 #define CLOSE_SOCKET(x) ::close(x);
 #define SET_IP(socket_addr,str_ip) \
@@ -45,80 +47,127 @@ static win_socket_dll dll;
 #include <string>
 #include <cassert>
 
-net::FSocket::address::address(){
+xsystem::net::FSocket::address::address(){
 	memset(&_socket_addr, 0, sizeof(_socket_addr));
 };
 
-net::FSocket::address::address(std::string const& str_ip, uint16_t port) {
+xsystem::net::FSocket::address::address(std::string const& str_ip, uint16_t port) {
 	set(str_ip, port);
 };
 
-void net::FSocket::address::set(std::string const& str_ip, uint16_t port) {
+void xsystem::net::FSocket::address::set(std::string const& str_ip, uint16_t port) {
 	_socket_addr.sin_family = AF_INET;  //TCP ipv4
 	SET_IP(_socket_addr, str_ip);  //点分十进制ip转32位
 	_socket_addr.sin_port = htons(port); //转成网络字节序
 }
-sockaddr const* net::FSocket::address::socket_addr(){
-	return (sockaddr*)(&_socket_addr);
+
+void xsystem::net::FSocket::address::set_by_domain(std::string domain, uint16_t port) {
+	_socket_addr.sin_family = AF_INET;  //TCP ipv4
+	_socket_addr.sin_port = htons(port); //转成网络字节序
+	#if __linux__
+		struct hostent* h;
+		if ( (h = gethostbyname(domain.c_str())) == 0 )   // 指定服务端的ip地址。
+		{
+			PRINT_ERROR
+		}
+		struct sockaddr_in servaddr;
+		memcpy(&_socket_addr.sin_addr,h->h_addr,h->h_length);
+	#elif _WIN32
+		struct hostent *hptr=NULL;
+		hptr = (struct hostent *)gethostbyname(domain.c_str());
+
+	//无效指针则结束
+		if (hptr == NULL || hptr->h_addr == NULL) {
+			PRINT_ERROR
+		}
+		CopyMemory(&_socket_addr.sin_addr.S_un.S_addr, hptr->h_addr_list[0], hptr->h_length);
+	#endif
+	
 }
 
-size_t net::FSocket::address::size(){
+
+size_t xsystem::net::FSocket::address::size(){
 	return sizeof(sockaddr);
 }
 
-net::FSocket::FSocket(){ this->sfd = socket(AF_INET, SOCK_STREAM, 0); if(this->sfd < 0){PRINT_ERROR} };
-net::FSocket::FSocket(std::string const& str_ip, uint16_t port) :addr(str_ip, port) { 
+xsystem::net::FSocket::FSocket(){ this->sfd = socket(AF_INET, SOCK_STREAM, 0); if(this->sfd < 0){PRINT_ERROR} };
+xsystem::net::FSocket::FSocket(std::string const& str_ip, uint16_t port) :addr(str_ip, port) { 
 	this->sfd = socket(AF_INET, SOCK_STREAM, 0); 
 	if(this->sfd<0){
 		PRINT_ERROR
 	}
-	assert(::bind(this->sfd, addr.socket_addr(), addr.size()) != SOCKET_ERROR);
+	#if __linux__
+		assert(xsystem::bind(this->sfd, (sockaddr *)&addr._socket_addr, addr.size()) != SOCKET_ERROR);
+	#elif _WIN32
+		assert(::bind(this->sfd, (sockaddr *)&addr._socket_addr, addr.size()) != SOCKET_ERROR);
+	#endif
 };
-net::FSocket::~FSocket() { this->close(); };
+xsystem::net::FSocket::~FSocket() { this->close(); };
 
-void net::FSocket::bind(std::string const& str_ip, uint16_t port) {
+void xsystem::net::FSocket::bind(std::string const& str_ip, uint16_t port) {
 	addr.set(str_ip, port);
-	if(::bind(this->sfd, addr.socket_addr(), addr.size()) <0){
-		PRINT_ERROR
-	}
+	#if __linux__
+		if(xsystem::bind(this->sfd, (sockaddr *)&addr._socket_addr, addr.size()) <0){PRINT_ERROR}
+	#elif _WIN32
+		if(::bind(this->sfd, (sockaddr *)&addr._socket_addr, addr.size()) <0){PRINT_ERROR}
+	#endif
 }
 
-void net::FSocket::connect(std::string const& str_ip, uint16_t port) {
+void xsystem::net::FSocket::connect(std::string const& str_ip, uint16_t port) {
 	address server_addr(str_ip, port);
-	if(::connect(this->sfd, server_addr.socket_addr(), server_addr.size())){
-		PRINT_ERROR
-	}
+	#if __linux__
+		if(xsystem::connect(this->sfd, (sockaddr *)&server_addr._socket_addr, server_addr.size())){PRINT_ERROR}
+	#elif _WIN32
+		if(::connect(this->sfd, (sockaddr *)&server_addr._socket_addr, server_addr.size())){PRINT_ERROR}
+	#endif
 }
 
-void net::FSocket::send(const char *msg) {
-	if(::send(this->sfd, msg, strlen(msg) + 1, 0)<0){
-		PRINT_ERROR
-	}
+void xsystem::net::FSocket::send(const char *msg) {
+	#if __linux__
+		if(xsystem::send(this->sfd, msg, strlen(msg) + 1, 0)<0){PRINT_ERROR}
+	#elif _WIN32
+		if(::send(this->sfd, msg, strlen(msg) + 1, 0)<0){PRINT_ERROR}
+	#endif
+	
+}
+void xsystem::net::FSocket::send(const char *msg,long len) {
+	#if __linux__
+		if(xsystem::send(this->sfd, msg, len, 0)<0){PRINT_ERROR}
+	#elif _WIN32
+		if(::send(this->sfd, msg, len, 0)<0){PRINT_ERROR}
+	#endif
 }
 
-char *net::FSocket::recv(size_t buffer_size) {
+char *xsystem::net::FSocket::recv(size_t buffer_size) {
 	char *buffer = new char[buffer_size]; //8KB
-	if (int t =::recv(this->sfd, buffer, buffer_size, 0) < 0) {
-		PRINT_ERROR
-	}
+	#if __linux__
+		if (int t =xsystem::recv(this->sfd, buffer, buffer_size, 0) < 0) {PRINT_ERROR}
+	#elif _WIN32
+		if (int t =::recv(this->sfd, buffer, buffer_size, 0) < 0) {PRINT_ERROR}
+	#endif
 	return buffer;
 }
 
-void net::FSocket::listen(size_t num) {
-	if(::listen(this->sfd, num) <0){
-		PRINT_ERROR
-	}
+void xsystem::net::FSocket::listen(size_t num) {
+	#if __linux__
+		if(xsystem::listen(this->sfd, num) <0){PRINT_ERROR}
+	#elif _WIN32
+		if(::listen(this->sfd, num) <0){PRINT_ERROR}
+	#endif
+
 }
-net::FSocket net::FSocket::accept() {
+xsystem::net::FSocket xsystem::net::FSocket::accept() {
 	//后面两个参数可以获得客户端的信息。这里置空不去管。
-	net::FSocket client;
+	xsystem::net::FSocket client;
 	
 	#if __linux__
 		socklen_t t = sizeof(sockaddr_in);
+		client.sfd = xsystem::accept(this->sfd, (sockaddr *)&client.addr._socket_addr, &t);  
 	#elif _WIN32
 		int t = sizeof(sockaddr_in);
+		client.sfd = ::accept(this->sfd, (sockaddr *)&client.addr._socket_addr, &t);  
 	#endif
-	client.sfd = ::accept(this->sfd, (sockaddr *)&client.addr._socket_addr, &t);  
+	
 	printf("%d\n",client.sfd);
 	if(client.sfd <0){
 		PRINT_ERROR
@@ -126,6 +175,6 @@ net::FSocket net::FSocket::accept() {
 	return client;
 }
 
-void net::FSocket::close() {
+void xsystem::net::FSocket::close() {
 	CLOSE_SOCKET(this->sfd);
 }

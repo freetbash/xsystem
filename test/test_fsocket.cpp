@@ -1,7 +1,7 @@
 #include <xsystem/xsystem.h>
 #include <iostream>
 int main(){
-    net::FSocket f("127.0.0.1",3145);
+    xsystem::net::FSocket f("127.0.0.1",3145);
     f.listen(5);
     auto m =f.accept();
     auto c = m.recv();
