@@ -14,7 +14,7 @@
 #pragma comment(lib, "ws2_32.lib")
 
 #endif
-#define PRINT_ERROR printf("%s:%d, %s\n", __FILE__, __LINE__, strerror(errno));
+#define PRINT_ERROR printf("%s:%d, %s\n", __FILE__, __LINE__, strerror(errno));exit(-1);
 
 // system
 namespace xsystem{
@@ -25,6 +25,7 @@ namespace xsystem{
     std::string get_os();
     std::string get_mac();
     void mkdirs(std::string path);
+    
     // rm
     // isdir
     // file_exist
@@ -36,6 +37,7 @@ namespace xsystem{
     #if __linux__
     #include <sys/socket.h>
     #include <netinet/in.h>
+    #include <arpa/inet.h>
     #elif _WIN32
     #include <winsock.h>
     #pragma comment(lib, "ws2_32.lib")
@@ -44,30 +46,33 @@ namespace xsystem{
     {
         class FSocket{
         public:
-            class address{
+            class Address{
             public:
-                sockaddr_in _socket_addr;
-                address();
-                address(std::string const &str_ip, uint16_t port);
-                void set(std::string const &str_ip, uint16_t port);
-                void set_by_domain(std::string domain, uint16_t port);
-                size_t size();
+                #if __linux__
+                    sockaddr_in addr;
+                #elif _WIN32
+                    SOCKADDR_IN addr;
+                #endif
+                void set(std::string ip, uint16_t port);
+                std::string get_ip();
+                uint16_t get_port();
             };
 
-            uint32_t sfd;
-            address addr;
+            uint32_t nfd;
+            Address address;
             FSocket();
-            FSocket(std::string const &str_ip, uint16_t port);
             ~FSocket();
-            void bind(std::string const &str_ip, uint16_t port);
-            void connect(std::string const &str_ip, uint16_t port);
-            void send(const char *msg);
-            void send(const char *msg,long len);
-            char *recv(size_t buffer_size = 8192);
-            void listen(size_t num = 10);
-            FSocket accept();
-            void close();
+            void Bind(std::string ip, uint16_t port);
+            void Listen(size_t num = 512);
+            void Connect(std::string ip, uint16_t port);
+            FSocket Accept();
+            void Send(const char *msg);
+            void Send(const char *msg,long len);
+            char *Recv(size_t buffer_size = 2048);
+            void Close();
         };
+        std::string domain_to_ip(std::string domain);
+        
     };
     namespace tools{
         void screenshot(char *savepath);
