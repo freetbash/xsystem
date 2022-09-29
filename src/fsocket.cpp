@@ -50,7 +50,6 @@ void xsystem::net::FSocket::Bind(std::string ip, uint16_t port){
 }
 
 void xsystem::net::FSocket::Connect(std::string ip, uint16_t port){
-	std::cout << ip<<":" << std::to_string(port)<<std::endl;
 	xsystem::net::FSocket::Address dst;
 	dst.set(ip,port);
 	#if __linux__
